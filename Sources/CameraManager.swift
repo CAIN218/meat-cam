@@ -5,12 +5,12 @@ import SwiftUI
 /// カメラのキャプチャセッションを管理し、フレームを間引きながら
 /// DonenessAnalyzing に渡して解析結果を @Published で公開する。
 final class CameraManager: NSObject, ObservableObject {
-    @Published var grid: DonenessGrid = .empty(columns: Self.gridColumns, rows: Self.gridRows)
+    @Published var grid: DonenessGrid = .empty(columns: CameraManager.gridColumns, rows: CameraManager.gridRows)
     @Published var isAuthorized = false
     @Published var setupError: String?
 
-    static let gridColumns = 40
-    static let gridRows = 30
+    static let gridColumns = 180
+    static let gridRows = 128
 
     let session = AVCaptureSession()
 
@@ -58,6 +58,13 @@ final class CameraManager: NSObject, ObservableObject {
             return
         }
         session.addOutput(output)
+
+        // 解析用に受け取るフレームは、明示的に向きを指定しないとセンサー基準の
+        // 横向きのまま渡ってくる(プレビュー表示は自動補正されるが解析側はされない)。
+        // ここを合わせないと、解析結果のグリッドと実際に見えている映像がズレる。
+        if let connection = output.connection(with: .video), connection.isVideoRotationAngleSupported(90) {
+            connection.videoRotationAngle = 90
+        }
 
         session.commitConfiguration()
 

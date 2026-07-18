@@ -49,6 +49,29 @@
      `DonenessAnalyzing` に準拠した `CoreMLDonenessAnalyzer` を新規実装 →
      `CameraManager.swift` の `analyzer` の初期化を差し替えるだけでOKな設計にしてある
 
+## 追記 (Mac上のClaude Code → Xcode内のClaude への引き継ぎ)
+
+Mac上のClaude Code(ターミナル側)がここまで進めた:
+
+- `xcodegen`(コマンドラインツール)で `MeatCam.xcodeproj` を自動生成済み。
+  `project.yml` がその設定ファイル。`Sources/` の6ファイルは登録済み、
+  カメラ権限の説明文もビルド設定経由で設定済み(`NSCameraUsageDescription`)。
+- ビルドで実際に1件エラーが出た: `CameraManager.swift` の
+  `@Published var grid: DonenessGrid = .empty(columns: Self.gridColumns, ...)` で
+  「covariant 'Self' type cannot be referenced from a stored property initializer」。
+  `Self.gridColumns` → `CameraManager.gridColumns` に修正済み。
+- Simulator向け・実機アーキテクチャ向け(未署名)の両方で `xcodebuild` によるビルドは
+  **成功**を確認済み。コード自体はこれ以上のエラーは無いはず。
+- **未着手・Xcode側のClaudeにお願いしたいこと**:
+  1. Signing & Capabilities で Team(Apple ID)を設定
+  2. 実機(iPhone)を接続してビルド・実行(⌘R)
+  3. 実機で肉を焼いてカメラをかざし、`DonenessAnalyzer.swift` の
+     `hueRanges` / `minSaturation` / `minValue` / `maxValue`、および
+     `CameraManager.swift` の `gridColumns`/`gridRows`/`analyzeEveryNFrames` を
+     実際の見え方に合わせて調整
+  4. `project.yml` / `MeatCam.xcodeproj` / 修正済み `CameraManager.swift` はまだ
+     git未コミットの状態。区切りの良いところでコミットしてほしい
+
 ## 元の会話で決まっていたこと(前提として引き継いでほしい)
 
 - 判定方式は「AIモデルで」という要望だったが、学習データが無いため今回は

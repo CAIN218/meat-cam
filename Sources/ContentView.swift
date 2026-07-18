@@ -21,13 +21,16 @@ struct ContentView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "camera.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.8))
                     Text(error)
+                        .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
             } else {
                 ProgressView("カメラを起動しています…")
+                    .tint(.white)
+                    .foregroundStyle(.white)
             }
         }
         .onAppear { camera.configureAndStart() }

@@ -35,10 +35,14 @@ struct DonenessGrid {
 /// `minSaturation` / `minValue` は実機でテストしながら調整してほしい。
 final class HeuristicDonenessAnalyzer: DonenessAnalyzing {
     /// 「生」とみなす色相の範囲(度)。0/360 付近の赤をまたぐので2区間で表現。
-    private let hueRanges: [ClosedRange<CGFloat>] = [0...18, 342...360]
-    private let minSaturation: CGFloat = 0.35
-    private let minValue: CGFloat = 0.20
-    private let maxValue: CGFloat = 0.95 // 反射でほぼ白飛びしている部分は判定から除外
+    // 肌色はHue 20-40°(オレンジ寄り)に出やすいため、そこを避けて純粋な赤寄りに絞る。
+    private let hueRanges: [ClosedRange<CGFloat>] = [0...15, 345...360]
+    // 肌色は彩度が低め(~0.3-0.4)になりやすいので、境界で誤検出しないよう高めに設定。
+    private let minSaturation: CGFloat = 0.45
+    // 暗い(明度が低い)ピクセルはRGB間のわずかなノイズでも彩度が異常に高く
+    // 算出されやすく、影や暗い被写体を誤検出する原因になる。閾値を上げて除外する。
+    private let minValue: CGFloat = 0.30
+    private let maxValue: CGFloat = 0.97 // 反射でほぼ白飛びしている部分は判定から除外
 
     private let ciContext = CIContext(options: [CIContextOption.workingColorSpace: NSNull()])
     private let colorSpace = CGColorSpaceCreateDeviceRGB()
