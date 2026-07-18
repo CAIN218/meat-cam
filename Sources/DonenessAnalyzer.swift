@@ -40,7 +40,7 @@ final class HeuristicDonenessAnalyzer: DonenessAnalyzing {
     private let minValue: CGFloat = 0.20
     private let maxValue: CGFloat = 0.95 // 反射でほぼ白飛びしている部分は判定から除外
 
-    private let ciContext = CIContext(options: [.workingColorSpace: NSNull()])
+    private let ciContext = CIContext(options: [CIContextOption.workingColorSpace: NSNull()])
     private let colorSpace = CGColorSpaceCreateDeviceRGB()
 
     func analyze(pixelBuffer: CVPixelBuffer, columns: Int, rows: Int) -> DonenessGrid {
