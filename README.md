@@ -1,85 +1,86 @@
-# MeatCam (仮) — 色弱の方向け・肉の焼け具合可視化アプリ
+# MeatCam (working title) — a raw-meat doneness visualizer for the colorblind
 
-カメラをかざすと、まだ生っぽい(赤みが強い)部分に斜線ハッチングを重ねて表示するiOSアプリです。
-色そのものではなく「模様(斜線)」を主な合図にしているので、赤/緑の色弱の方でも判別しやすいようにしています。
+An iOS app that overlays diagonal hatching on parts of the camera view that still look raw (strongly red).
+It leans on pattern ("hatching") rather than color alone as the main cue, so it's easier to tell apart for
+people with red/green color blindness.
 
-このフォルダにはSwiftのソースファイルのみ入っています(`.xcodeproj`はXcode上で作る想定です)。
-Windows環境ではiOSアプリのビルド・実機確認ができないため、以下の手順でMac上のXcodeにセットアップしてください。
+This folder only contains Swift source files (the `.xcodeproj` is meant to be created in Xcode).
+Since iOS apps can't be built or run on a physical device from Windows, set it up in Xcode on a Mac using
+the steps below.
 
-## 1. Xcodeプロジェクトの作成
+## 1. Create the Xcode project
 
-1. Xcodeを開き、**File > New > Project**
-2. **iOS > App** を選択
-3. 以下の設定で作成:
-   - Product Name: `MeatCam` (お好きな名前でOK)
+1. Open Xcode, **File > New > Project**
+2. Select **iOS > App**
+3. Create it with these settings:
+   - Product Name: `MeatCam` (or whatever you prefer)
    - Interface: **SwiftUI**
    - Language: **Swift**
-4. 作成されたプロジェクト内の `ContentView.swift` と、アプリ名の `〇〇App.swift`(例: `MeatCamApp.swift`)は**削除**してください(このリポジトリのファイルで置き換えます)。
+4. **Delete** the generated `ContentView.swift` and the app-name file (e.g. `MeatCamApp.swift`) — they'll be
+   replaced by the files in this repo.
 
-## 2. ソースファイルの追加
+## 2. Add the source files
 
-`Sources/` フォルダ内の以下のファイルを、Xcodeのプロジェクトナビゲータにドラッグ&ドロップで追加してください(「Copy items if needed」にチェック)。
+Drag the following files from the `Sources/` folder into Xcode's project navigator (check "Copy items if
+needed"):
 
-- `MeatCamApp.swift` — アプリのエントリポイント
-- `ContentView.swift` — メイン画面(カメラ映像 + ハッチング重ね合わせ + 凡例)
-- `CameraManager.swift` — カメラのキャプチャセッション管理、フレームを間引きながら解析器に渡す
-- `DonenessAnalyzer.swift` — 「生っぽいか」の判定ロジック本体(後述)
-- `CameraPreviewView.swift` — `AVCaptureVideoPreviewLayer`をSwiftUIに橋渡しするラッパー
-- `RawRegionOverlayView.swift` — 斜線ハッチングの描画
+- `MeatCamApp.swift` — app entry point
+- `ContentView.swift` — main screen (camera feed + hatching overlay + legend)
+- `CameraManager.swift` — manages the camera capture session, throttles frames before handing them to the analyzer
+- `DonenessAnalyzer.swift` — the core "does this look raw?" logic (see below)
+- `CameraPreviewView.swift` — SwiftUI wrapper around `AVCaptureVideoPreviewLayer`
+- `RawRegionOverlayView.swift` — draws the diagonal hatching
 
-## 3. カメラ権限の設定
+## 3. Set up camera permission
 
-Xcodeのプロジェクト設定 > 対象ターゲット > **Info** タブで、以下のキーを追加してください:
+In Xcode's project settings > your target > the **Info** tab, add this key:
 
 - Key: `Privacy - Camera Usage Description` (`NSCameraUsageDescription`)
-- Value: `焼け具合を判定するためにカメラを使用します`
+- Value: something like "This app uses the camera to check doneness."
 
-これが無いと、カメラへのアクセス要求時に即クラッシュします。
+Without this, requesting camera access will crash the app immediately.
 
-## 4. 実機で実行
+## 4. Run on a device
 
-**Simulatorにはカメラが無いため、実機(iPhone)での実行が必須です。**
+**The Simulator has no camera, so you must run this on a physical iPhone.**
 
-1. iPhoneをMacにUSB接続 (もしくはWi-Fi経由のワイヤレスデバッグ設定)
-2. Xcode上部のデバイス選択で自分のiPhoneを選ぶ
-3. ビルド実行 (⌘R)
-4. 初回起動時にカメラ権限を許可
+1. Connect your iPhone to the Mac via USB (or set up wireless debugging over Wi-Fi)
+2. Select your iPhone from the device picker at the top of Xcode
+3. Build and run (⌘R)
+4. Grant camera access on first launch
 
-Apple Developerアカウント(無料アカウントでも可)でのApple IDサインインがXcode側で必要です。
+You'll need to be signed into Xcode with an Apple ID (a free Apple Developer account works fine).
 
 ---
 
-## 判定ロジックについて (今の実装 = ヒューリスティック)
+## About the detection logic (current implementation = a heuristic)
 
-`DonenessAnalyzer.swift` の `HeuristicDonenessAnalyzer` が実際の判定を行っています。仕組み:
+`HeuristicDonenessAnalyzer` in `DonenessAnalyzer.swift` does the actual detection. How it works:
 
-1. カメラのフレームを 40×30 の粗いグリッドに縮小
-2. 各セルの平均色をHSV(色相・彩度・明度)に変換
-3. 赤〜赤紫の色相かつ、そこそこ以上の彩度・明度なら「生っぽい」と判定
+1. Downscale each camera frame to a coarse 40×30 grid
+2. Convert each cell's average color to HSV (hue, saturation, value)
+3. Flag a cell as "raw-looking" if it falls in the red-to-magenta hue range with reasonably high saturation and value
 
-これは学習済みAIモデルではなく、色相ベースのルールです。実際の肉・照明条件によっては
-誤判定が出るはずなので、`hueRanges` / `minSaturation` / `minValue` / `maxValue` の値を
-実機でテストしながら調整してください。
+This is a hue-based rule set, not a trained AI model. It's expected to misfire under real meat/lighting
+conditions, so tune `hueRanges` / `minSaturation` / `minValue` / `maxValue` while testing on a device.
 
-## 将来、本物のAIモデルに差し替えるには
+## Swapping in a real AI model later
 
-判定ロジックは `DonenessAnalyzing` というprotocolの背後に隠してあるので、
-`ContentView` や `CameraManager` を触らずに判定部分だけ差し替えられます。
+The detection logic sits behind a `DonenessAnalyzing` protocol, so it can be swapped out without touching
+`ContentView` or `CameraManager`.
 
-1. **写真を集める**: 生の状態〜よく焼けた状態まで、いろいろな肉・角度・照明で
-   数十〜数百枚撮影する
-2. **Create ML(Macに標準で入っているアプリ)でセグメンテーションモデルを学習**:
-   撮った写真に「生の部分」をマスクで塗って教師データを作り、Image Segmentation
-   テンプレートで学習 → `.mlmodel` が書き出される
-3. `.mlmodel` をXcodeプロジェクトに追加すると自動でSwiftの型が生成される
-4. `DonenessAnalyzing` に準拠した `CoreMLDonenessAnalyzer` を新規作成し、
-   `VNCoreMLRequest` でそのモデルを実行、出力マスクを `DonenessGrid` に変換する
-5. `CameraManager.swift` の `private let analyzer: DonenessAnalyzing = HeuristicDonenessAnalyzer()`
-   を `CoreMLDonenessAnalyzer()` に変更するだけで載せ替え完了
+1. **Collect photos**: shoot dozens to hundreds of photos of meat at various doneness levels, angles, and lighting
+2. **Train a segmentation model in Create ML** (bundled with macOS): paint masks over the "raw" regions in
+   your photos to build training data, train with the Image Segmentation template → this exports a `.mlmodel`
+3. Adding the `.mlmodel` to the Xcode project auto-generates a Swift type for it
+4. Create a new `CoreMLDonenessAnalyzer` conforming to `DonenessAnalyzing` that runs that model via
+   `VNCoreMLRequest` and converts its output mask into a `DonenessGrid`
+5. In `CameraManager.swift`, change `private let analyzer: DonenessAnalyzing = HeuristicDonenessAnalyzer()`
+   to `CoreMLDonenessAnalyzer()` — that's the whole swap
 
-## 既知の制約・今後の調整ポイント
+## Known limitations / things to tune next
 
-- ヒューリスティックの色閾値は未調整(実際の肉で試して合わせる必要あり)
-- 生の霜降り(白い脂身)やソースの色によって誤検出する可能性あり
-- 反射光・強い照明下でのハイライト(白飛び)は判定から除外しているが、調整余地あり
-- 現状フロントカメラ切り替えUIは無し(背面カメラ固定)
+- The heuristic's color thresholds are untuned (need real meat to calibrate against)
+- Raw marbling (white fat) or sauce color may trigger false positives
+- Highlights from reflections/strong lighting are excluded from detection, but could use more tuning
+- No front-camera toggle yet (rear camera only)
